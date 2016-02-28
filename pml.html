@@ -213,8 +213,9 @@ CMgbm3&lt;-confusionMatrix(predtraingbmObj3,trainingset$classe)</code></pre>
 ##          C   12  120 3239   91   37
 ##          D    5   13   61 3097   42
 ##          E    4    4    4   14 3498</code></pre>
-<p>Accuracy Rate and Test set Prediction The accuracy rate, <code>CMgbm3$overall[[1]]</code>, suggests a very good fit overall. This would not be expected from an independent set of results taken from different individuals than those involved in the original experiment. The so-called out of sample error rate (1-accuracy level) is expected to be greater than <code>1-CMgbm3$overall[[1]]</code>, the in-sample-error rate.</p>
-<p>The final model was used against the testing set of 20 observations and the class of exercise predicted and submitted to the Course Project prediction Quiz. predtestinggbmObj3&lt;-predict(modgbmFit3, gbmredtestingset)</p>
+<p>Accuracy Rate and Test set Prediction The accuracy rate, 0.9627459, suggests a very good fit overall. This would not be expected from an independent set of results taken from different individuals than those involved in the original experiment. The so-called out of sample error rate (1-accuracy level) is expected to be greater than 0.0372541, the in-sample-error rate.</p>
+<p>The final model was used against the testing set of 20 observations and the class of exercise predicted and submitted to the Course Project prediction Quiz.</p>
+<pre class="r"><code>predtestinggbmObj3&lt;-predict(modgbmFit3, gbmredtestingset)</code></pre>
 </div>
 </div>
 
