@@ -83,7 +83,7 @@ algorithms.
 Two initial models were fitted to the data were created: one with Random Forests
 and the other with GBM.
 
-```{r cache=FALSE, message=F, warning=F}
+```{r cache=TRUE, message=F, warning=F}
 #Random Forest
 #set.seed(124)
 #modrfFit1 <- train(classe ~. , method="rf", data=trainingset, verbose=FALSE)
@@ -136,7 +136,7 @@ accel_dumbbell_x,yaw_arm,magnet_belt_y,magnet_arm_z)
 ####Generalized Boosting Model with K-Folds Cross Validation
 Cross Validation in the data set is implemented using the trainControl function. The function was used to define a 10 fold cross-validation. This effectively split the training data set into 10 separate chunks (or folds)
 to evaluate the model. This is repeated 10 times. The parameter allowParallel is set to TRUE to allow parallel computation, if available.
-```{r, cache=FALSE,message=F, warning=F}
+```{r, cache=TRUE,message=F, warning=F}
 ctrl<-trainControl(
   method="repeatedcv", #method for cross validation
   number=10, #Number of folds
@@ -155,8 +155,9 @@ CMgbm3$table
 ```
 
 Accuracy Rate and Test set Prediction
-The accuracy rate, `CMgbm3$overall[[1]]`, suggests a very good fit overall. This would not be expected from an independent set of results taken from different individuals than those involved in the original experiment. The so-called out of sample error rate (1-accuracy level) is expected to be greater than `1-CMgbm3$overall[[1]]`, the in-sample-error rate.
+The accuracy rate, `r CMgbm3$overall[[1]]`, suggests a very good fit overall. This would not be expected from an independent set of results taken from different individuals than those involved in the original experiment. The so-called out of sample error rate (1-accuracy level) is expected to be greater than `r 1-CMgbm3$overall[[1]]`, the in-sample-error rate.
 
 The final model was used against the testing set of 20 observations and the class of exercise predicted and submitted to the Course Project prediction Quiz.
+```{r}
 predtestinggbmObj3<-predict(modgbmFit3, gbmredtestingset)
-
+```
