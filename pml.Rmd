@@ -1,0 +1,162 @@
+---
+title: "Machine Learning in Human Activity Recognition"
+author: "Kelvin Coker"
+output: html_document
+date: "28 January 2016"
+---
+
+```{r message=F, warning=F, echo=FALSE}
+library(caret,warn.conflicts = FALSE, quietly=TRUE)
+library(dplyr,warn.conflicts = FALSE, quietly=TRUE)
+library(doMC,warn.conflicts = FALSE, quietly=TRUE)
+```
+
+###Synopsis
+This report explores the modelling exercise quality based on sensor readings. Subjects were asked to perform a one set of 10 repetitions of a one arm dumbbell curl in five different ways:
+
+Exactly according to the specification (Class A),
+throw- ing the elbows to the front (Class B),
+lifting the dumbbell only halfway (Class C),
+lowering the dumbbell only halfway (Class D)
+throwing the hips to the front (Class E).
+
+Class A corresponds to the specified execution of the exercise, while the other four classes correspond to common mistakes.Participants were supervised by an experienced weight lifter to make sure the execution complied to the manner they were supposed to simulate. The exercises were performed by six male participants aged between 20-28 years, with little weight lifting experience and using a 1.25kg dumbbell.
+
+###Loading and Cleaning the Data Set
+The training set can be downloaded from: https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv
+
+The test set data ser can be downloaded from: https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv
+
+```{r}
+trainingset<-read.csv(file='pml-training.csv',na.strings=c('NA',''))
+
+trainingsetsummary<-filter(trainingset, new_window=="yes")
+trainingsetsummary<-select(trainingsetsummary, num_window,
+                           contains("avg_"), contains("stddev"), classe)
+
+testingset<-read.csv(file='pml-testing.csv')
+```
+
+
+While the training set comprises raw readings from the sensors that were placed on the test subject and dumbbell, along with summary statistics, such as average readings, standard deviation and kurtosis for each window of time, the test set does not contain summary statistics. Therefore all summary statistics cannot be used for modelling and fitting to the test data set and can be removed from the testing set and also the training set.
+```{r}
+#Clean up the dataset in the testing set
+testingset<-select(testingset, -starts_with("amplitude_"),
+                    -starts_with("avg_"), -starts_with("var_"),
+                    -starts_with("stddev"), -starts_with("kurtosis_"),
+                    -starts_with("skewness_"), -starts_with("max_"),
+                    -starts_with("min_"),
+                    -contains("timestamp"),-contains("window"),
+                    -contains("user_name"), -X)
+
+#Clean up the training set data
+trainingset<-select(trainingset, -starts_with("amplitude_"),
+             -starts_with("avg_"), -starts_with("var_"),
+             -starts_with("stddev"), -starts_with("kurtosis_"),
+             -starts_with("skewness_"), -starts_with("max_"),
+             -starts_with("min_"),
+             -contains("timestamp"),-contains("window"),
+             -contains("user_name"), -X)
+```
+
+###Building a Model
+
+####Model considerations
+The trainingset provided contains `r nrow(trainingset)` rows of data
+The testingset provided contains `r nrow(testingset)` rows of data, which is a small sample size. There is a chance that predictions on the such a small testing set,  from our chosen model, could show a high level of accuracy, which could be down to chance. To minimise this, cross validation is built into the model.
+
+####Parellel Processing and Performance
+Models were trained and fitted using a Macbook Pro with the following specification:
+MacBook Pro (Retina, 13-inch, Mid 2014)
+Processor 2.6 GHz Intel Core i5
+8 GB 1600 MHz DDR3
+
+Parallel processing was enabled by registering three cores, via the package DoMC. 
+```{r}
+registerDoMC(cores = 3)
+```
+
+####Initial Model Fit
+Fitting a predictive model to this data set is a classification problem and as such Random Forests and Generalised Boosting Models (GBM) seemed appropriate appropriate
+algorithms.
+
+Two initial models were fitted to the data were created: one with Random Forests
+and the other with GBM.
+
+```{r cache=TRUE, message=F, warning=F}
+#Random Forest
+#set.seed(124)
+#modrfFit1 <- train(classe ~. , method="rf", data=trainingset, verbose=FALSE)
+#predtrainrfObj1<-predict(modrfFit1, trainingset)
+#confMrf1<-confusionMatrix(predtrainrfObj1,trainingset$classe)
+
+#Generalized Boosting Model
+set.seed(124)
+modgbmFit2 <- train(classe ~. , method="gbm", data = trainingset, verbose=FALSE)
+predtraingbmObj2<-predict(modgbmFit2, trainingset)
+confMgbm2<-confusionMatrix(predtraingbmObj2,trainingset$classe)
+```
+
+```{r}
+confMgbm2$overall[c(1,3,4)]
+confMgbm2$table
+```
+
+####Initial Model Fit Results
+The Random Forest model, modrfFit1, took a long time to train and is only Nearly half of the predictions were wrongly classified as D, where the true value is C. Perfect classification otherwise, still suggests overfitting, where the model trained itself to the characteristic movements of the test subjects. 
+
+The Generalised Boosting Model modgbmFit2, faired better, with an accuracy statistic of `r confMgbm2$overall[[1]]`. There were misclassifications but in general this was minimal. 
+Due to its accuracy levels and the tendency of the Random Forest to overfit, the Generalized linear model was chosen for further development.
+
+
+####Reduction of dimensions
+The original training data set contains a mixture of weak and strong predictors
+for classe. A summary of the first gbm model shows the relative importance of the predictors. This was used to create a reduced data set, containing 20 variables and the classe variable to be predicted.
+
+```{r}
+head(summary(modgbmFit2,plotit=FALSE), 20)
+```
+
+```{r}
+gbmredtrainingset<-select(trainingset,
+roll_belt, pitch_forearm, yaw_belt,magnet_dumbbell_z,
+magnet_dumbbell_y,roll_forearm,magnet_belt_z,gyros_belt_z,
+accel_forearm_x,roll_dumbbell,pitch_belt,accel_dumbbell_y,
+accel_forearm_z,magnet_forearm_z,gyros_dumbbell_y,
+accel_dumbbell_x,yaw_arm,magnet_belt_y,magnet_arm_z,classe)
+
+gbmredtestingset<-select(testingset,
+roll_belt, pitch_forearm, yaw_belt,magnet_dumbbell_z,
+magnet_dumbbell_y,roll_forearm,magnet_belt_z,gyros_belt_z,
+accel_forearm_x,roll_dumbbell,pitch_belt,accel_dumbbell_y,
+accel_forearm_z,magnet_forearm_z,gyros_dumbbell_y,
+accel_dumbbell_x,yaw_arm,magnet_belt_y,magnet_arm_z)
+```
+
+####Generalized Boosting Model with K-Folds Cross Validation
+Cross Validation in the data set is implemented using the trainControl function. The function was used to define a 10 fold cross-validation. This effectively split the training data set into 10 separate chunks (or folds)
+to evaluate the model. This is repeated 10 times. The parameter allowParallel is set to TRUE to allow parallel computation, if available.
+```{r, cache=TRUE,message=F, warning=F}
+ctrl<-trainControl(
+  method="repeatedcv", #method for cross validation
+  number=10, #Number of folds
+  repeats = 10, 
+  allowParallel=TRUE) #Allow parellel processing if available
+set.seed(124)
+modgbmFit3 <- train(classe ~. , method="gbm", trControl=ctrl, data = gbmredtrainingset, verbose=FALSE)
+predtraingbmObj3<-predict(modgbmFit3, gbmredtrainingset)
+CMgbm3<-confusionMatrix(predtraingbmObj3,trainingset$classe)
+```
+
+####Final Model Fit Results
+```{r}
+CMgbm3$overall[c(1,3,4)]
+CMgbm3$table
+```
+
+Accuracy Rate and Test set Prediction
+The accuracy rate, `CMgbm3$overall[[1]]`, suggests a very good fit overall. This would not be expected from an independent set of results taken from different individuals than those involved in the original experiment. The so-called out of sample error rate (accuracy level) would be less than `CMgbm3$overall[[1]]`
+
+The final model was used against the testing set of 20 observations and the class of exercise predicted and submitted to the Course Project prediction Quiz.
+predtestinggbmObj3<-predict(modgbmFit3, gbmredtestingset)
+
